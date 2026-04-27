@@ -4,31 +4,36 @@ on:
   workflow_run:
     workflows: ["CI Pipeline"]
     types: [completed]
+    branches: [main] # Requirement 53: Only trigger on main
 
 jobs:
   deploy-staging:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    environment: staging
+    environment: staging # Requirement 54
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Staging Deployment
-        run: echo "Deploying to STAGING environment..."
+        run: |
+          echo "IMAGE_NAME=sakila-app"
+          echo "Deploying image with tag: staging"
+          echo "Deploying to STAGING environment..."
 
       - name: Job Summary
         run: |
           echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "Status: Success" >> $GITHUB_STEP_SUMMARY
+          echo "Environment: Staging" >> $GITHUB_STEP_SUMMARY # Requirement 55
 
       - name: Notification
-        run: echo "Slack notification: Deployment to staging successful"
+        run: 'echo "Slack notification: Deployment to staging successful"' # Fixed syntax
 
   deploy-production:
     needs: deploy-staging
     runs-on: ubuntu-latest
-    environment: production
+    environment: production # Requirement 56 (Trigger for protection rule)
 
     steps:
       - uses: actions/checkout@v4
@@ -37,16 +42,17 @@ jobs:
         run: echo "Deploying to PRODUCTION environment..."
 
       - name: Notification
-        run: echo "Slack notification: Production deployment successful"
+        run: 'echo "Slack notification: Production deployment successful"'
 
-      - name: Create Release Date
+      - name: Create Release Tag
         id: date
-        run: echo "TAG=v$(date +%Y.%m.%d)" >> $GITHUB_OUTPUT
+        run: echo "TAG=v$(date +%Y.%m.%d-%H%M)" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.date.outputs.TAG }}
           name: Release ${{ steps.date.outputs.TAG }}
+          body: "Automated production release from Task C2"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Requirement 56
