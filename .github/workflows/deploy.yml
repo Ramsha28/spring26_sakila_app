@@ -1,116 +1,35 @@
-name: Deployment Pipeline
+deploy.yml = name: CD Deployment Pipeline
 
 on:
   workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
-  push:
-    branches:
-      - main
+    workflows: ["CI Pipeline"] # Matches your CI name in image_e6a9f1.png
+    types: [completed]
 
 jobs:
   deploy-staging:
-    if: github.event.workflow_run.conclusion == 'success' || github.ref == 'refs/heads/main'
+    # Logic: Only execute if the CI actually passed
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-
+    environment: staging
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Staging Deployment Simulation
+      - uses: actions/checkout@v4
+      - name: Staging Step
+        run: echo "Deploying to Staging..."
+      - name: Generate Job Summary
         run: |
-          echo "Deploying to STAGING environment..."
-          echo "MYSQL_HOST=${{ secrets.MYSQL_HOST }}"
-          echo "APP_STATUS=staging"
-
-      - name: Write Summary
-        run: |
-          echo "### Staging Deployment Successful 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "- App deployed to staging environment" >> $GITHUB_STEP_SUMMARY
-          echo "- Database connected successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Status:** Success" >> $GITHUB_STEP_SUMMARY
 
   deploy-production:
     needs: deploy-staging
     runs-on: ubuntu-latest
-    environment:
-      name: production
-
+    environment: production # Triggers your manual approval
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Production Deployment Simulation
-        run: |
-          echo "Deploying to PRODUCTION environment..."
-          echo "APP_VERSION=$(date +%Y.%m.%d)"
-
-      - name: Slack Notification Simulation
-        run: echo "Slack notification: Production deployment successful"
-
-      - name: Create GitHub Release
+      - uses: actions/checkout@v4
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ github.run_number }}
-          name: Release v${{ github.run_number }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}name: Deployment Pipeline
-
-on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: write
-
-jobs:
-  deploy-staging:
-    if: github.event.workflow_run.conclusion == 'success' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Staging Deployment Simulation
-        run: |
-          echo "Deploying to STAGING environment..."
-          echo "MYSQL_HOST=${{ secrets.MYSQL_HOST }}"
-          echo "APP_STATUS=staging"
-
-      - name: Write Summary
-        run: |
-          echo "### Staging Deployment Successful 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "- App deployed to staging environment" >> $GITHUB_STEP_SUMMARY
-          echo "- Database connected successfully" >> $GITHUB_STEP_SUMMARY
-
-  deploy-production:
-    needs: deploy-staging
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Production Deployment Simulation
-        run: |
-          echo "Deploying to PRODUCTION environment..."
-          echo "APP_VERSION=$(date +%Y.%m.%d)"
-
-      - name: Slack Notification Simulation
-        run: echo "Slack notification: Production deployment successful"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ github.run_number }}
-          name: Release v${{ github.run_number }}
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
